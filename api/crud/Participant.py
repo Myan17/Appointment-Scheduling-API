@@ -56,30 +56,17 @@ def get_meetings(participant_id: int):
     Raises:
         HTTPException: If the participant is not found.
     """
-    participant = User.find(participant_id)
-    if not participant:
-        raise HTTPException(status_code=404, detail="Participant not found.")
-
     participants = Participant.where("participant_id", participant_id).get().all()
+    participant = User.find(participant_id)
     meetings = []
-
     for part in participants:
         meet = Meeting.get(part.meeting_id)
-        if not meet:
-            raise HTTPException(status_code=404, detail=f"Meeting with ID {part.meeting_id} not found.")
-        
-        # Fetch organizer's timezone and convert meeting time
-        organizer = User.where("email", meet.organizer).first()
-        if not organizer:
-            raise HTTPException(status_code=404, detail="Organizer not found.")
-        
-        meeting_time = getTime(meet.date, meet.time)
-        converted_time = convertTime(organizer.timezone, participant.timezone, meeting_time)
-        
-        meet.time = converted_time.split(",")[1]
-        meet.date = converted_time.split(",")[0]
+        user = User.where("email", meet.organizer).get().all()
+        time = getTime(meet.date, meet.time)
+        time = convertTime(user[0].timezone, participant.timezone, time)
+        meet.time = time.split(",")[1]
+        meet.date = time.split(",")[0]
         meetings.append(meet)
-
     return meetings
 
 def participants_by_meeting(meeting_id: int):
@@ -93,6 +80,4 @@ def participants_by_meeting(meeting_id: int):
         List[Participant]: A list of participants in the meeting.
     """
     participants = Participant.where("meeting_id", meeting_id).get().all()
-    if not participants:
-        raise HTTPException(status_code=404, detail="No participants found for the given meeting ID.")
     return participants
