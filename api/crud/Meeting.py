@@ -28,14 +28,12 @@ def add(meeting_data: schema.MeetingBase):
     Raises:
         HTTPException: If the meeting organizer is not found.
     """
-    organizer = User.where("email", meeting_data.organizer).get()
-    if not organizer:
-        raise HTTPException(status_code=400, detail="Organizer not found.")
-    
+    user = User.where("email", meeting_data.organizer).get()
+    if not user:
+        return HTTPException(status_code=400, detail="Host not Found.")
     meeting = Meetings()
     for attr in vars(meeting_data).keys():
-        setattr(meeting, attr, getattr(meeting_data, attr))
-    
+        setattr(meeting, attr,getattr(meeting_data, attr))
     meeting.save()
     return meeting
 
@@ -72,24 +70,13 @@ def getMeetingWithParticipants(meeting_id: int):
     """
     meeting = Meetings.find(meeting_id)
     if not meeting:
-        raise HTTPException(status_code=404, detail="Meeting not found.")
-
+        raise HTTPException(status_code=400, detail="Meeting not Found")
     participants = participants_by_meeting(meeting_id)
-    participant_details = []
 
+    data = {'meeting_id': meeting_id, 'date': meeting.date, 'time': meeting.time, 'title': meeting.title, 'organizer': meeting.organizer}
+    list = []
     for participant in participants:
-        user = User.find(participant.participant_id)
-        if user:
-            participant_details.append(user)
-
-    # Create a structured data object
-    meeting_data = {
-        'meeting_id': meeting_id,
-        'date': meeting.date,
-        'time': meeting.time,
-        'title': meeting.title,
-        'organizer': meeting.organizer,
-        'participants': participant_details
-    }
-    return schema.Meetings(**meeting_data)
+        list.append(User.find(participant.participant_id))
+    data['participants'] = list
+    return schema.Meetings(**data)
 
